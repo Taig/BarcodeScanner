@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.view.View.MeasureSpec
+import com.taig.android.barcode.scanner.R
 
 class	Crosshair( attributes: AttributeSet = null, style: Int = 0 )( implicit context: Context )
 extends	View( context, attributes, style )
@@ -13,6 +14,8 @@ extends	View( context, attributes, style )
 	def this( context: Context, attributes: AttributeSet ) = this( attributes )( context )
 
 	def this( context: Context, attributes: AttributeSet, style: Int ) = this( attributes, style )( context )
+
+	setId( R.id.crosshair )
 
 	override def onMeasure( width: Int, height: Int ) =
 	{

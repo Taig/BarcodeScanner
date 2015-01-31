@@ -23,7 +23,7 @@ Full example for sbt:
 ````scala
 resolvers += Resolver.url( "Taig", url( "http://taig.github.io/repository" ) )( ivyStylePatterns )
 
-libraryDependencies += "com.taig.android" %% "barcode-scanner" % "1.0.0"
+libraryDependencies += "com.taig.android" % "barcode-scanner" % "1.0.0"
 ````
 
 # Usage

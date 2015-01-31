@@ -1,220 +1,132 @@
-Introduction
-============
+# Introduction
 
-Android library projects that provides easy to use and extensible Barcode Scanner views based on ZXing and ZBar.
+Android library projects that provides easy to use and extensible Barcode Scanner views based on ZXing.
 
-Screenshots
-===========
-![Portrait](https://raw.github.com/dm77/barcodescanner/master/screenshots/portrait_small.png)
+This library is a fork of [barcodescanner][1] by [dm77][2]. It removes support for the ZBar scanner and instead only relies on ZXing. Furthermore it adds the possibility to use an Android View as custom HUD.
 
-![Landscape](https://raw.github.com/dm77/barcodescanner/master/screenshots/landscape_small.png)
+# Installation
 
-ZXing
-=====
+Add the following dependency to your build system:
 
-Installation
-------------
+**Group** `com.taig.android`
 
-Add the following dependency to your build.gradle file.
+**Artifact** `barcode-scanner`
 
-compile 'me.dm7.barcodescanner:zxing:1.6'
+**Version** `1.0.0`
 
-Simple Usage
-------------
+And also make sure to add my custom content resolver:
 
-1.) Add camera permission to your AndroidManifest.xml file:
+`http://taig.github.io/repository`
+
+Full example for sbt:
+
+````scala
+resolvers += Resolver.url( "Taig", url( "http://taig.github.io/repository" ) )( ivyStylePatterns )
+
+libraryDependencies += "com.taig.android" %% "barcode-scanner" % "1.0.0"
+````
+
+# Usage
+
+Add camera permission to your `AndroidManifest.xml` file:
 
 ```xml
 <uses-permission android:name="android.permission.CAMERA" />
 ```
+## Basic
 
-2.) A very basic activity would look like this:
+Activity setup:
 
 ```java
-public class SimpleScannerActivity extends Activity implements ZXingScannerView.ResultHandler {
-    private ZXingScannerView mScannerView;
+public class SimpleScannerActivity extends Activity implements BarcodeScannerView.ResultHandler {
+    private BarcodeScannerView mScannerView;
 
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
-        mScannerView = new ZXingScannerView(this);   // Programmatically initialize the scanner view
-        setContentView(mScannerView);                // Set the scanner view as the content view
+
+        mScannerView = new BarcodeScannerView(this);   // Programmatically initialize the scanner view
+        setContentView(mScannerView);                  // Set the scanner view as the content view
     }
 
     @Override
     public void onResume() {
         super.onResume();
+
         mScannerView.setResultHandler(this); // Register ourselves as a handler for scan results.
         mScannerView.startCamera();          // Start camera on resume
     }
 
     @Override
     public void onPause() {
+
         super.onPause();
         mScannerView.stopCamera();           // Stop camera on pause
     }
 
     @Override
     public void handleResult(Result rawResult) {
+
         // Do something with the result here
         Log.v(TAG, rawResult.getText()); // Prints scan results
         Log.v(TAG, rawResult.getBarcodeFormat().toString()); // Prints the scan format (qrcode, pdf417 etc.)
     }
 }
-
 ```
 
-Please take a look at the [zxing/sample] (https://github.com/dm77/barcodescanner/tree/master/zxing/sample) project for a full working example.
+## Advanced
 
-Advanced Usage
---------------
+To supply your custom HUD from xml:
 
-Take a look at the [ScannerActivity.java] (https://github.com/dm77/barcodescanner/blob/master/zxing/sample/src/main/java/me/dm7/barcodescanner/zxing/sample/ScannerActivity.java) or [ScannerFragment.java] (https://github.com/dm77/barcodescanner/blob/master/zxing/sample/src/main/java/me/dm7/barcodescanner/zxing/sample/ScannerFragment.java) classes to get an idea on advanced usage.
+**my_activity_view.xml**
 
-Interesting methods on the ZXingScannerView include:
+````xml
+<com.taig.android.barcode.scanner.BarcodeScannerView
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:scanner="http://schemas.android.com/apk/res-auto"    <!-- Important namespace import -->
+	android:id="@+id/my_scanner"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	scanner:hud="@layout/scanner_hud" />                       <!-- Reference to a layout that will be placed above the scanner -->
+````
 
-```java
-// Toggle flash:
-void setFlash(boolean);
+**scanner_hud.xml**
 
-// Toogle autofocus:
-void setAutoFocus(boolean);
+````xml
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:layout_width="match_parent"
+	         android:layout_height="match_parent"
+	         android:layout_gravity="center">
 
-// Specify interested barcode formats:
-void setFormats(List<BarcodeFormat> formats);
-```
+    <!--
+         The view below is your crosshair, the area that the barcode decoder will analyze, which is kind of
+         expensive. If you omit the crosshair id the whole screen will be analyzed which may be bad idea,
+         performance wise.
+    --> 
 
-Supported Formats:
+    <View id="@id/crosshair"
+          android:layout_width="150dp"
+	      android:layout_height="150dp"
+	      android:background="@color/whatever" />
 
-```java
-BarcodeFormat.UPC_A
-BarcodeFormat.UPC_E
-BarcodeFormat.EAN_13
-BarcodeFormat.EAN_8
-BarcodeFormat.RSS_14
-BarcodeFormat.CODE_39
-BarcodeFormat.CODE_93
-BarcodeFormat.CODE_128
-BarcodeFormat.ITF
-BarcodeFormat.CODABAR
-BarcodeFormat.QR_CODE
-BarcodeFormat.DATA_MATRIX
-BarcodeFormat.PDF_417
-```
+</FrameLayout>
+````
 
-ZBar
-====
+From code you can use the `setHud()` methods of the `BarcodeScannerView`.
 
-Installation
-------------
+## More
 
-Add the following dependency to your build.gradle file.
+For more details about flash and autofocus you should have a look at the original [documentation][1].
 
-compile 'me.dm7.barcodescanner:zbar:1.6'
+# TODO / Known Issues
 
-Simple Usage
-------------
+- Distored image rendering
+- Usage of deprecated Camera API
+- Performance tweaks
 
-1.) Add camera permission to your AndroidManifest.xml file:
+# License
 
-```xml
-<uses-permission android:name="android.permission.CAMERA" />
-```
-
-2.) A very basic activity would look like this:
-
-```java
-public class SimpleScannerActivity extends Activity implements ZBarScannerView.ResultHandler {
-    private ZBarScannerView mScannerView;
-
-    @Override
-    public void onCreate(Bundle state) {
-        super.onCreate(state);
-        mScannerView = new ZBarScannerView(this);    // Programmatically initialize the scanner view
-        setContentView(mScannerView);                // Set the scanner view as the content view
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        mScannerView.setResultHandler(this); // Register ourselves as a handler for scan results.
-        mScannerView.startCamera();          // Start camera on resume
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        mScannerView.stopCamera();           // Stop camera on pause
-    }
-
-    @Override
-    public void handleResult(Result rawResult) {
-        // Do something with the result here
-        Log.v(TAG, rawResult.getContents()); // Prints scan results
-        Log.v(TAG, rawResult.getBarcodeFormat().getName()); // Prints the scan format (qrcode, pdf417 etc.)
-    }
-}
-
-```
-
-Please take a look at the [zbar/sample] (https://github.com/dm77/barcodescanner/tree/master/zbar/sample)  project for a full working example.
-
-Advanced Usage
---------------
-
-
-Take a look at the [ScannerActivity.java] (https://github.com/dm77/barcodescanner/blob/master/zbar/sample/src/main/java/me/dm7/barcodescanner/zbar/sample/ScannerActivity.java) or [ScannerFragment.java] (https://github.com/dm77/barcodescanner/blob/master/zbar/sample/src/main/java/me/dm7/barcodescanner/zbar/sample/ScannerFragment.java) classes to get an idea on advanced usage.
-
-Interesting methods on the ZBarScannerView include:
-
-```java
-// Toggle flash:
-void setFlash(boolean);
-
-// Toogle autofocus:
-void setAutoFocus(boolean);
-
-// Specify interested barcode formats:
-void setFormats(List<BarcodeFormat> formats);
-```
-
-Supported Formats:
-
-```
-BarcodeFormat.PARTIAL
-BarcodeFormat.EAN8
-BarcodeFormat.UPCE
-BarcodeFormat.ISBN10
-BarcodeFormat.UPCA
-BarcodeFormat.EAN13
-BarcodeFormat.ISBN13
-BarcodeFormat.I25
-BarcodeFormat.DATABAR
-BarcodeFormat.DATABAR_EXP
-BarcodeFormat.CODABAR
-BarcodeFormat.CODE39
-BarcodeFormat.PDF417
-BarcodeFormat.QRCODE
-BarcodeFormat.CODE93
-BarcodeFormat.CODE128
-```
-
-Credits
-=======
-
-Almost all of the code for these library projects is based on:
-
-1. CameraPreview app from Android SDK APIDemos
-2. The ZXing project: https://github.com/zxing/zxing
-3. The ZBar Android SDK: http://sourceforge.net/projects/zbar/files/AndroidSDK/
-
-Contributors
-============
-
-* [Rking788](https://github.com/Rking788)
-* [furedal](https://github.com/furedal)
-* [Yarikx](https://github.com/Yarikx)
-
-License
-=======
 Apache License, Version 2.0
+
+[1]: https://github.com/dm77/barcodescanner
+[2]: https://github.com/dm77

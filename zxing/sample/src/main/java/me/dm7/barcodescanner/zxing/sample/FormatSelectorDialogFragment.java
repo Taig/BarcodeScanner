@@ -10,7 +10,7 @@ import com.google.zxing.BarcodeFormat;
 
 import java.util.ArrayList;
 
-import me.dm7.barcodescanner.zxing.ZXingScannerView;
+import com.taig.android.barcode.scanner.ZXingScannerView;
 
 public class FormatSelectorDialogFragment extends DialogFragment {
     public interface FormatSelectorDialogListener {

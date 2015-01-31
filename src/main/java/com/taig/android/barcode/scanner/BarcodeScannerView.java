@@ -1,10 +1,9 @@
-package me.dm7.barcodescanner.core;
+package com.taig.android.barcode.scanner;
 
 import android.content.Context;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.Camera;
-import android.os.AsyncTask;
 import android.util.AttributeSet;
 import android.widget.FrameLayout;
 

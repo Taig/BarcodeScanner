@@ -1,4 +1,4 @@
-package me.dm7.barcodescanner.core;
+package com.taig.android.barcode.scanner;
 
 import android.content.Context;
 import android.content.res.Configuration;

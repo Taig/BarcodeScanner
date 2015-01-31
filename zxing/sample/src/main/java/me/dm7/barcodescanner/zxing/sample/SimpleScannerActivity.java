@@ -6,7 +6,7 @@ import android.widget.Toast;
 
 import com.google.zxing.Result;
 
-import me.dm7.barcodescanner.zxing.ZXingScannerView;
+import com.taig.android.barcode.scanner.ZXingScannerView;
 
 public class SimpleScannerActivity extends ActionBarActivity implements ZXingScannerView.ResultHandler {
     private ZXingScannerView mScannerView;

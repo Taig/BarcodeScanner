@@ -17,7 +17,7 @@ import com.google.zxing.Result;
 import java.util.ArrayList;
 import java.util.List;
 
-import me.dm7.barcodescanner.zxing.ZXingScannerView;
+import com.taig.android.barcode.scanner.ZXingScannerView;
 
 public class ScannerActivity extends ActionBarActivity implements MessageDialogFragment.MessageDialogListener,
         ZXingScannerView.ResultHandler, FormatSelectorDialogFragment.FormatSelectorDialogListener  {

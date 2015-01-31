@@ -10,7 +10,7 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.View;
 
-public class ViewFinderView extends View
+public class Hud extends View
 {
 	private static final String TAG = "ViewFinderView";
 
@@ -34,12 +34,12 @@ public class ViewFinderView extends View
 	private static final int POINT_SIZE = 10;
 	private static final long ANIMATION_DELAY = 80l;
 
-	public ViewFinderView( Context context )
+	public Hud( Context context )
 	{
 		super( context );
 	}
 
-	public ViewFinderView( Context context, AttributeSet attrs )
+	public Hud( Context context, AttributeSet attrs )
 	{
 		super( context, attrs );
 	}

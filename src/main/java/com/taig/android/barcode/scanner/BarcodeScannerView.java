@@ -11,7 +11,7 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 {
 	private Camera mCamera;
 	private CameraPreview mPreview;
-	private ViewFinderView mViewFinderView;
+	private Hud mHud;
 	private Rect mFramingRectInPreview;
 
 	public BarcodeScannerView( Context context )
@@ -29,9 +29,9 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 	public void setupLayout()
 	{
 		mPreview = new CameraPreview( getContext() );
-		mViewFinderView = new ViewFinderView( getContext() );
+		mHud = new Hud( getContext() );
 		addView( mPreview );
-		addView( mViewFinderView );
+		addView( mHud );
 	}
 
 	public void startCamera()
@@ -39,7 +39,7 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 		mCamera = CameraUtils.getCameraInstance();
 		if( mCamera != null )
 		{
-			mViewFinderView.setupViewFinder();
+			mHud.setupViewFinder();
 			mPreview.setCamera( mCamera, this );
 			mPreview.initCameraPreview();
 		}
@@ -60,7 +60,7 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 	{
 		if( mFramingRectInPreview == null )
 		{
-			Rect framingRect = mViewFinderView.getFramingRect();
+			Rect framingRect = mHud.getFramingRect();
 			if( framingRect == null )
 			{
 				return null;

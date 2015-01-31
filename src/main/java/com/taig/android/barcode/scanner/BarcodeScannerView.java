@@ -1,45 +1,110 @@
 package com.taig.android.barcode.scanner;
 
 import android.content.Context;
-import android.graphics.Point;
+import android.content.res.Configuration;
+import android.content.res.TypedArray;
 import android.graphics.Rect;
 import android.hardware.Camera;
 import android.util.AttributeSet;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.FrameLayout;
+import com.google.zxing.*;
+import com.google.zxing.common.HybridBinarizer;
 
-public abstract class BarcodeScannerView extends FrameLayout implements Camera.PreviewCallback
+import java.util.*;
+
+public class BarcodeScannerView extends FrameLayout implements Camera.PreviewCallback
 {
+	public interface ResultHandler
+	{
+		public void handleResult( Result rawResult );
+	}
+
+	public static final List<BarcodeFormat> ALL_FORMATS = new ArrayList<BarcodeFormat>();
+
+	static
+	{
+		ALL_FORMATS.add( BarcodeFormat.UPC_A );
+		ALL_FORMATS.add( BarcodeFormat.UPC_E );
+		ALL_FORMATS.add( BarcodeFormat.EAN_13 );
+		ALL_FORMATS.add( BarcodeFormat.EAN_8 );
+		ALL_FORMATS.add( BarcodeFormat.RSS_14 );
+		ALL_FORMATS.add( BarcodeFormat.CODE_39 );
+		ALL_FORMATS.add( BarcodeFormat.CODE_93 );
+		ALL_FORMATS.add( BarcodeFormat.CODE_128 );
+		ALL_FORMATS.add( BarcodeFormat.ITF );
+		ALL_FORMATS.add( BarcodeFormat.CODABAR );
+		ALL_FORMATS.add( BarcodeFormat.QR_CODE );
+		ALL_FORMATS.add( BarcodeFormat.DATA_MATRIX );
+		ALL_FORMATS.add( BarcodeFormat.PDF_417 );
+	}
+
 	private Camera mCamera;
+
 	private CameraPreview mPreview;
-	private Hud mHud;
-	private Rect mFramingRectInPreview;
+
+	private View mHud;
+
+	private View mCrosshair;
+
+	private int[] mCrosshairPosition = new int[2];
+
+	private Rect mCrosshairArea = new Rect();
+
+	private MultiFormatReader mMultiFormatReader;
+
+	private List<BarcodeFormat> mFormats;
+
+	private ResultHandler mResultHandler;
 
 	public BarcodeScannerView( Context context )
 	{
-		super( context );
-		setupLayout();
+		this( context, null );
 	}
 
-	public BarcodeScannerView( Context context, AttributeSet attributeSet )
+	public BarcodeScannerView( Context context, AttributeSet attributes )
 	{
-		super( context, attributeSet );
-		setupLayout();
-	}
+		super( context, attributes );
 
-	public void setupLayout()
-	{
+		TypedArray array = getContext()
+			.getTheme()
+			.obtainStyledAttributes( attributes, R.styleable.Hud, 0, 0 );
+
+		try
+		{
+			mHud = LayoutInflater
+				.from( getContext() )
+				.inflate( array.getResourceId( R.styleable.Hud_hud, R.layout.hud ), this, false );
+		}
+		finally
+		{
+			array.recycle();
+		}
+
 		mPreview = new CameraPreview( getContext() );
-		mHud = new Hud( getContext() );
+		mCrosshair = mHud.findViewById( R.id.crosshair );
+
 		addView( mPreview );
 		addView( mHud );
+
+		initMultiFormatReader();
+	}
+
+	private void initMultiFormatReader()
+	{
+		Map<DecodeHintType, Object> hints = new EnumMap<DecodeHintType, Object>( DecodeHintType.class );
+		hints.put( DecodeHintType.POSSIBLE_FORMATS, getFormats() );
+		mMultiFormatReader = new MultiFormatReader();
+		mMultiFormatReader.setHints( hints );
 	}
 
 	public void startCamera()
 	{
 		mCamera = CameraUtils.getCameraInstance();
+
 		if( mCamera != null )
 		{
-			mHud.setupViewFinder();
 			mPreview.setCamera( mCamera, this );
 			mPreview.initCameraPreview();
 		}
@@ -56,46 +121,19 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 		}
 	}
 
-	public synchronized Rect getFramingRectInPreview( int width, int height )
-	{
-		if( mFramingRectInPreview == null )
-		{
-			Rect framingRect = mHud.getFramingRect();
-			if( framingRect == null )
-			{
-				return null;
-			}
-			Rect rect = new Rect( framingRect );
-			Point screenResolution = DisplayUtils.getScreenResolution( getContext() );
-			Point cameraResolution = new Point( width, height );
-
-			if( cameraResolution == null || screenResolution == null )
-			{
-				// Called early, before init even finished
-				return null;
-			}
-
-			rect.left = rect.left * cameraResolution.x / screenResolution.x;
-			rect.right = rect.right * cameraResolution.x / screenResolution.x;
-			rect.top = rect.top * cameraResolution.y / screenResolution.y;
-			rect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
-
-			mFramingRectInPreview = rect;
-		}
-		return mFramingRectInPreview;
-	}
-
 	public void setFlash( boolean flag )
 	{
 		if( mCamera != null && CameraUtils.isFlashSupported( mCamera ) )
 		{
 			Camera.Parameters parameters = mCamera.getParameters();
+
 			if( flag )
 			{
 				if( parameters.getFlashMode().equals( Camera.Parameters.FLASH_MODE_TORCH ) )
 				{
 					return;
 				}
+
 				parameters.setFlashMode( Camera.Parameters.FLASH_MODE_TORCH );
 			}
 			else
@@ -104,8 +142,10 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 				{
 					return;
 				}
+
 				parameters.setFlashMode( Camera.Parameters.FLASH_MODE_OFF );
 			}
+
 			mCamera.setParameters( parameters );
 		}
 	}
@@ -114,16 +154,12 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 	{
 		if( mCamera != null && CameraUtils.isFlashSupported( mCamera ) )
 		{
-			Camera.Parameters parameters = mCamera.getParameters();
-			if( parameters.getFlashMode().equals( Camera.Parameters.FLASH_MODE_TORCH ) )
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
+			return mCamera
+				.getParameters()
+				.getFlashMode()
+				.equals( Camera.Parameters.FLASH_MODE_TORCH );
 		}
+
 		return false;
 	}
 
@@ -132,6 +168,7 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 		if( mCamera != null && CameraUtils.isFlashSupported( mCamera ) )
 		{
 			Camera.Parameters parameters = mCamera.getParameters();
+
 			if( parameters.getFlashMode().equals( Camera.Parameters.FLASH_MODE_TORCH ) )
 			{
 				parameters.setFlashMode( Camera.Parameters.FLASH_MODE_OFF );
@@ -140,6 +177,7 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 			{
 				parameters.setFlashMode( Camera.Parameters.FLASH_MODE_TORCH );
 			}
+
 			mCamera.setParameters( parameters );
 		}
 	}
@@ -150,5 +188,138 @@ public abstract class BarcodeScannerView extends FrameLayout implements Camera.P
 		{
 			mPreview.setAutoFocus( state );
 		}
+	}
+
+	public void setFormats( List<BarcodeFormat> formats )
+	{
+		mFormats = formats;
+		initMultiFormatReader();
+	}
+
+	public void setResultHandler( ResultHandler resultHandler )
+	{
+		mResultHandler = resultHandler;
+	}
+
+	public Collection<BarcodeFormat> getFormats()
+	{
+		if( mFormats == null )
+		{
+			return ALL_FORMATS;
+		}
+
+		return mFormats;
+	}
+
+	@Override
+	public void onPreviewFrame( byte[] data, Camera camera )
+	{
+		Camera.Parameters parameters = camera.getParameters();
+		Camera.Size size = parameters.getPreviewSize();
+		int width = size.width;
+		int height = size.height;
+
+		if( DisplayUtils.getScreenOrientation( getContext() ) == Configuration.ORIENTATION_PORTRAIT )
+		{
+			byte[] rotatedData = new byte[data.length];
+
+			for( int y = 0; y < height; y++ )
+			{
+				for( int x = 0; x < width; x++ )
+				{
+					rotatedData[x * height + height - y - 1] = data[x + y * width];
+				}
+			}
+
+			int tmp = width;
+			width = height;
+			height = tmp;
+			data = rotatedData;
+		}
+
+		Result rawResult = null;
+		PlanarYUVLuminanceSource source = buildLuminanceSource( data, width, height );
+
+		if( source != null )
+		{
+			BinaryBitmap bitmap = new BinaryBitmap( new HybridBinarizer( source ) );
+
+			try
+			{
+				rawResult = mMultiFormatReader.decodeWithState( bitmap );
+			}
+			catch( Exception exception )
+			{
+				// I've got no idea
+			}
+			finally
+			{
+				mMultiFormatReader.reset();
+			}
+		}
+
+		if( rawResult != null )
+		{
+			stopCamera();
+
+			if( mResultHandler != null )
+			{
+				mResultHandler.handleResult( rawResult );
+			}
+		}
+		else
+		{
+			camera.setOneShotPreviewCallback( this );
+		}
+	}
+
+	public PlanarYUVLuminanceSource buildLuminanceSource( byte[] data, int width, int height )
+	{
+		if( mCrosshair == null )
+		{
+			mCrosshairArea.set( 0, 0, width, height );
+		}
+		else
+		{
+			mCrosshair.getLocationOnScreen( mCrosshairPosition );
+
+			// TODO scale up camera preview while maintain proportions
+			// TODO migrate to new camera api
+			// TODO make this more efficient
+			int displayWidth = mPreview.getWidth();
+			int displayHeight = mPreview.getHeight();
+			float scaleX = width / (float) displayWidth;
+			float scaleY = height / (float) displayHeight;
+
+			mCrosshairArea.set(
+				(int) ( mCrosshairPosition[0] * scaleX ),
+				(int) ( mCrosshairPosition[1] * scaleY ),
+				(int) ( ( mCrosshairPosition[0] + mCrosshair.getWidth() ) * scaleX ),
+				(int) ( ( mCrosshairPosition[1] + mCrosshair.getHeight() ) * scaleY )
+			);
+		}
+
+		// Go ahead and assume it's YUV rather than die.
+		PlanarYUVLuminanceSource source = null;
+
+		try
+		{
+			source = new PlanarYUVLuminanceSource(
+				data,
+				width,
+				height,
+				mCrosshairArea.left,
+				mCrosshairArea.top,
+				mCrosshairArea.width(),
+				mCrosshairArea.height(),
+				false
+			);
+		}
+		catch( Exception e )
+		{
+			// I've got no idea
+		}
+
+		return source;
 	}
 }

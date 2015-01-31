@@ -10,11 +10,9 @@ extends	android.AutoBuild
 	lazy val main = Project( "barcode-scanner", file( "." ) )
 		.settings( androidBuildAar: _* )
 		.settings(
-			libraryDependencies ++= Seq(
-				"com.google.zxing" % "core" % "3.1.0"
-			),
-			name := "Toolbelt",
-			organization := "com.taig.android.barcode.scanner",
+			libraryDependencies += "com.google.zxing" % "core" % "3.1.0",
+			name := "Barcode Scanner",
+			organization := "com.taig.android",
 			publishArtifact in ( Compile, packageDoc ) := false,
 			publishArtifact in ( Compile, packageSrc ) := true,
 			scalaVersion := "2.11.5",
